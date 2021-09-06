@@ -1,5 +1,4 @@
 import json
-import requests
 from bs4 import BeautifulSoup
 import requests
 from requests import Session
@@ -26,6 +25,8 @@ class DatabaseOperation:
         # get Cross-Site Request Forgery protection token
         soup = BeautifulSoup(login_form.text, 'html.parser')
         csrf_token = soup.find('input', {'id': 'csrf_token'})['value']
+        if csrf_token is None:
+            raise Exception("csrf_token could not found.")
 
         # login the given session
         login_request = self.session.post('{}/login/'.format(self.superset_url),
@@ -63,7 +64,9 @@ class DatabaseOperation:
     def list(self):
         r = self.session.get("{}/api/v1/database".format(self.superset_url))
 
-        if r.status_code != 200:
+        if r.status_code == 401:
+            raise Exception("Invalid credentials")
+        elif r.status_code != 200:
             raise Exception("Unable to perform operation: {}".format(r.text))
 
         all_databases = map(lambda db: {"name": db.get('database_name'), "id": db.get('explore_database_id'),
@@ -83,7 +86,7 @@ class DatabaseOperation:
         protocol = "https"
         uri = "trino://TODO:TODO@{}:443/metriql?protocol={}".format(metriql_url, protocol)
         extra = {"engine_params": {"connect_args": {"http_scheme": "https"}}}
-        r = this.session.post("{}/api/v1/database".format(self.superset_url),
+        r = self.session.post("{}/api/v1/database".format(self.superset_url),
                               json={
                                   "allow_csv_upload": False,
                                   "allow_ctas": True,
@@ -98,7 +101,9 @@ class DatabaseOperation:
                                   "sqlalchemy_uri": uri
                               })
 
-        if r.status_code != 200:
+        if r.status_code == 401:
+            raise Exception("Invalid credentials")
+        elif r.status_code != 200:
             raise Exception("Unable to perform operation: {}".format(r.text))
 
         return self.list()
@@ -179,7 +184,9 @@ class DatabaseOperation:
                                                              "filters": [{"col": "database", "opr": "rel_m_m",
                                                                           "value": database_id}]})
 
-        if superset_dataset_requests.status_code != 200:
+        if superset_dataset_requests.status_code == 401:
+            raise Exception("Invalid credentials")
+        elif superset_dataset_requests.status_code != 200:
             raise Exception("Unable to perform operation: {}".format(superset_dataset_requests.text))
 
         superset_datasets = superset_dataset_requests.json().get('result')
@@ -237,6 +244,7 @@ class DatabaseOperation:
                                                                          })
                 if created_dataset_request.status_code not in [201, 200]:
                     raise Exception("Unable to create dataset: {}".format(created_dataset_request.text))
+                existing_dataset_id = content.get('id')
 
             updated_dataset_request = self.session.post(
                 "{}/datasource/save".format(self.superset_url), files=[], data={"data": json.dumps({
@@ -253,8 +261,8 @@ class DatabaseOperation:
                     # "owners": [
                     #     0
                     # ],
-                    # "schema": table_schema,
-                    # "table_name": table_name
+                    "schema": table_schema,
+                    "table_name": table_name
                 })})
 
             if updated_dataset_request.status_code != 200:
