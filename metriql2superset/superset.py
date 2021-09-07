@@ -137,7 +137,7 @@ class DatabaseOperation:
         return [{
             "d3format": "string",
             "description": measure.get('description'),
-            "expression": name,
+            "expression": '"{}"'.format(name.replace('"', '""')),
             "id": name,
             "metric_name": name,
             "verbose_name": measure.get('label'),
@@ -154,10 +154,6 @@ class DatabaseOperation:
         for name, (dimension, relation) in dimensions.items():
             column_id = existing_column_lookup.get(name)
             columns.append(DatabaseOperation._build_column(column_id, name, dimension, True, mappings))
-
-        for name, (measure, relation) in measures.items():
-            column_id = existing_column_lookup.get(name)
-            columns.append(DatabaseOperation._build_column(column_id, name, measure, False, mappings))
 
         return columns
 
