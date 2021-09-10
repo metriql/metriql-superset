@@ -39,4 +39,4 @@ def main(args: list = None):
         metriql_metadata = MetriqlMetadata(parsed.metriql_url, json.loads(source))
         if parsed.database_id is None:
             raise Exception("--database-id argument is required")
-        operation.sync(parsed.database_id, metriql_metadata)
+        operation.sync(int(parsed.database_id), metriql_metadata)

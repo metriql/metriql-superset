@@ -20,7 +20,23 @@ class DatabaseOperation:
         # set up session for auth
         self.session = requests.Session()
         self.session.headers["Referer"] = self.superset_url
-        login_form = self.session.get("{}/login/".format(superset_url))
+
+        ## TODO: check hostname
+        if '.app.preset.io/' in superset_url.lower():
+            self.login_preset(username, password)
+        else:
+            self.login_self_hosted_superset(username, password)
+
+    def login_preset(self, token, secret):
+        preset_auth = self.session.post('https://manage.app.preset.io/api/v1/auth/',
+                                        json={"name": token, "secret": secret})
+        if preset_auth.status_code != 200:
+            raise Exception("Unable to login: {}".format(preset_auth.text))
+        access_token = preset_auth.json().get('payload').get('access_token')
+        self.session.headers["Authorization"] = "Bearer {}".format(access_token)
+
+    def login_self_hosted_superset(self, username, password):
+        login_form = self.session.get("{}/login/".format(self.superset_url))
 
         # get Cross-Site Request Forgery protection token
         soup = BeautifulSoup(login_form.text, 'html.parser')
@@ -66,6 +82,8 @@ class DatabaseOperation:
 
         if r.status_code == 401:
             raise Exception("Invalid credentials")
+        elif r.status_code == 404:
+            raise Exception("Invalid Superset URL, 404 returned")
         elif r.status_code != 200:
             raise Exception("Unable to perform operation: {}".format(r.text))
 
@@ -135,7 +153,7 @@ class DatabaseOperation:
             existing_metric_lookup[metric.get('metric_name')] = metric.get('id')
 
         return [{
-            "d3format": "string",
+            "d3format": ((measure.get('reportOptions') or {}).get('superset') or {}).get('d3_format'),
             "description": measure.get('description'),
             "expression": '"{}"'.format(name.replace('"', '""')),
             "id": name,
@@ -240,13 +258,13 @@ class DatabaseOperation:
                                                                          })
                 if created_dataset_request.status_code not in [201, 200]:
                     raise Exception("Unable to create dataset: {}".format(created_dataset_request.text))
-                existing_dataset_id = content.get('id')
+                existing_dataset_id = created_dataset_request.json().get('id')
 
             updated_dataset_request = self.session.post(
                 "{}/datasource/save".format(self.superset_url), files=[], data={"data": json.dumps({
                     "id": existing_dataset_id,
                     "columns": columns,
-                    "datasource_type": "table",
+                    # "datasource_type": "table",
                     "type": "table",
                     "database": {"id": database_id},
                     "description": dataset.get('description'),
@@ -264,7 +282,7 @@ class DatabaseOperation:
             if updated_dataset_request.status_code != 200:
                 raise Exception("Unable to update dataset: {}".format(updated_dataset_request.text))
 
-            print("{} ".format(dataset.get('name')), end=", ")
+            print(dataset.get('name'))
 
         print("Successfully synchronized existing {} datasets, created {} datasets".format(
             len(metriql_datasets) - new_dataset_count, new_dataset_count))
