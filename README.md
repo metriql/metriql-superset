@@ -30,5 +30,5 @@ While Superset provides an API, it doesn't let updating / creating datasets and 
 
 Yes! Preset offers [an API](https://docs.preset.io/docs/using-the-preset-api) in their Enterprise Plan and you can use the API tokens to be able to synchronize the metrics of Superset deployments in your Preset account. The `token` in the picture below should be passed as `--superset-username` and the value of `secret` should be passed as `--superset-password`:
 
-![Preset API Token](https://cdn.document360.io/4749ddf8-aa05-4f3f-80e1-07a5d2d0f137/Images/Documentation/Generate_API_Key_3a.png)
+![Preset API Token](/preset-token-image.png)
 
