@@ -1,6 +1,6 @@
-# metriql Superset Integration
+# Metriql Superset Integration
 
-Synchronize Superset datasets from Metriql datasets. The idea is to leverage metriql datasets in your Tableau workflow without any additional modeling in Tableau.
+Synchronize Superset datasets from Metriql datasets. The idea is to leverage Metriql datasets in your Superset workflow without any additional modeling in Superset.
 
 ### Usage
 
