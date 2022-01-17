@@ -171,12 +171,18 @@ class DatabaseOperation:
 
         for name, (dimension, relation) in dimensions.items():
             column_id = existing_column_lookup.get(name)
-            columns.append(DatabaseOperation._build_column(column_id, name, dimension, True, mappings))
+            if dimension.get('postOperations') is not None:
+                for operation in dimension.get('postOperations'):
+                    label = "{} ({})".format(dimension.get('label') or name, operation)
+                    columns.append(DatabaseOperation._build_column(column_id, name+'::'+operation, dimension, True, mappings, label))
+            else:
+                columns.append(DatabaseOperation._build_column(column_id, name, dimension, True, mappings, dimension.get('label')))
 
         return columns
 
     @staticmethod
-    def _build_column(column_id, name, field, is_dimension, mappings):
+    def _build_column(column_id, name, field, is_dimension, mappings, label):
+        datatype = DatabaseOperation._get_column_datatype(field.get('fieldType'))
         return {
             "column_name": name,
             "description": field.get('description'),
@@ -184,10 +190,10 @@ class DatabaseOperation:
             "groupby": is_dimension,
             "id": name,
             "is_active": not field.get('hidden'),
-            "is_dttm": mappings.get('event_timestamp') == field.get('name') if is_dimension else False,
+            "is_dttm": datatype == 'datetime' if is_dimension else False,
             "python_date_format": DatabaseOperation.get_python_date_format(field.get('fieldType')),
-            "type": DatabaseOperation._get_column_datatype(field.get('fieldType')),
-            "verbose_name": field.get('label')
+            "type": datatype,
+            "verbose_name": label
         }
 
     def sync(self, database_id, metadata):

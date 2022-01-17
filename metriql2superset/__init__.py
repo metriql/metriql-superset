@@ -4,13 +4,14 @@ from .metadata import MetriqlMetadata
 from .superset import DatabaseOperation
 import sys
 
-__version__ = "0.4"
+__version__ = "0.6"
 
 
 def main(args: list = None):
     parser = argparse.ArgumentParser(description="Generates Tableau TDS files for metriql datasets")
 
-    parser.add_argument("command", choices=["create-database", "list-databases", "sync-database"], help="command to execute")
+    parser.add_argument("command", choices=["create-database", "list-databases", "sync-database"],
+                        help="command to execute")
 
     parser.add_argument("--metriql-url", help="metriql URL")
     parser.add_argument("--file", help="Read dataset from file instead of stdin")
@@ -25,10 +26,12 @@ def main(args: list = None):
 
     parsed = parser.parse_args(args=args)
     operation = DatabaseOperation(parsed.superset_url, parsed.superset_username, parsed.superset_password)
-    if parsed.command == "create-database":
+    if parsed.command == "version":
+        print(__version__)
+    elif parsed.command == "create-database":
         operation.create(parsed.metriql_url, parsed.database_name)
         print('Successfully created!')
-    if parsed.command == "list-databases":
+    elif parsed.command == "list-databases":
         databases = operation.list()
         print(json.dumps(databases))
     elif parsed.command == "sync-database":
